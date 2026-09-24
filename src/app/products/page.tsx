@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProducts, Product } from "@/api/products";
+import { getProducts, Product, searchProducts } from "@/api/products";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -14,6 +14,21 @@ export default function ProductsPage() {
 
   const [total, setTotal] = useState(0);
 
+  const [searchInput, setSearchInput] = useState("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -22,17 +37,33 @@ export default function ProductsPage() {
       return;
     }
 
+    const controller = new AbortController();
+
     const fetchProducts = async () => {
-      const skip = (page - 1) * limit;
+      try {
+        const skip = (page - 1) * limit;
 
-      const data = await getProducts(limit, skip);
+        const data = searchQuery
+          ? await searchProducts(searchQuery, limit, skip, controller.signal)
+          : await getProducts(limit, skip, controller.signal);
 
-      setProducts(data.products);
-      setTotal(data.total);
+        setProducts(data.products);
+        setTotal(data.total);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        console.error(error);
+      }
     };
 
     fetchProducts();
-  }, [router, page, limit]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [router, page, limit, searchQuery]);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -43,6 +74,17 @@ export default function ProductsPage() {
   return (
     <main className="p-6">
       <h1 className="text-2xl font-bold mb-6">Products</h1>
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+          }}
+          className="border rounded px-4 py-2 w-full max-w-md"
+        />
+      </div>
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
