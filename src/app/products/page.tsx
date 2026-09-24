@@ -1,7 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProducts, Product, searchProducts } from "@/api/products";
+import {
+  getProducts,
+  Product,
+  searchProducts,
+  getCategories,
+  getProductsByCategory,
+  Category,
+} from "@/api/products";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -17,6 +24,10 @@ export default function ProductsPage() {
   const [searchInput, setSearchInput] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -43,9 +54,25 @@ export default function ProductsPage() {
       try {
         const skip = (page - 1) * limit;
 
-        const data = searchQuery
-          ? await searchProducts(searchQuery, limit, skip, controller.signal)
-          : await getProducts(limit, skip, controller.signal);
+        let data;
+
+        if (searchQuery) {
+          data = await searchProducts(
+            searchQuery,
+            limit,
+            skip,
+            controller.signal
+          );
+        } else if (selectedCategory) {
+          data = await getProductsByCategory(
+            selectedCategory,
+            limit,
+            skip,
+            controller.signal
+          );
+        } else {
+          data = await getProducts(limit, skip, controller.signal);
+        }
 
         setProducts(data.products);
         setTotal(data.total);
@@ -63,7 +90,20 @@ export default function ProductsPage() {
     return () => {
       controller.abort();
     };
-  }, [router, page, limit, searchQuery]);
+  }, [router, page, limit, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -74,7 +114,7 @@ export default function ProductsPage() {
   return (
     <main className="p-6">
       <h1 className="text-2xl font-bold mb-6">Products</h1>
-      <div className="mb-6">
+      <div className="mb-6 flex gap-4">
         <input
           type="text"
           placeholder="Search products..."
@@ -84,6 +124,23 @@ export default function ProductsPage() {
           }}
           className="border rounded px-4 py-2 w-full max-w-md"
         />
+
+        <select
+          value={selectedCategory}
+          onChange={(e) => {
+            setSelectedCategory(e.target.value);
+            setPage(1);
+          }}
+          className="border rounded px-4 py-2"
+        >
+          <option value="">All Categories</option>
+
+          {categories.map((category) => (
+            <option key={category.slug} value={category.slug}>
+              {category.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="hidden md:block overflow-x-auto">

@@ -10,6 +10,12 @@ export interface Product {
   thumbnail: string;
 }
 
+export interface Category {
+  slug: string;
+  name: string;
+  url: string;
+}
+
 export const getProducts = async (
   limit: number,
   skip: number,
@@ -35,6 +41,29 @@ export const searchProducts = async (
   const response = await api.get("/products/search", {
     params: {
       q: query,
+      limit,
+      skip,
+    },
+    signal,
+  });
+
+  return response.data;
+};
+
+export const getCategories = async (): Promise<Category[]> => {
+  const response = await api.get("/products/categories");
+
+  return response.data;
+};
+
+export const getProductsByCategory = async (
+  category: string,
+  limit: number,
+  skip: number,
+  signal?: AbortSignal
+) => {
+  const response = await api.get(`/products/category/${category}`, {
+    params: {
       limit,
       skip,
     },
