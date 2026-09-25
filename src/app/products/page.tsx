@@ -119,6 +119,20 @@ export default function ProductsPage() {
           data = await getProducts(limit, skip, sortBy, order, signal);
         }
 
+        const totalPages = Math.ceil(data.total / limit);
+
+        if (page > totalPages && totalPages > 0) {
+          const params = new URLSearchParams(window.location.search);
+
+          params.set("page", String(totalPages));
+
+          router.replace(`/products?${params.toString()}`);
+
+          setPage(totalPages);
+
+          return;
+        }
+
         setProducts(data.products);
         setTotal(data.total);
       } catch (error) {
@@ -134,7 +148,7 @@ export default function ProductsPage() {
         }
       }
     },
-    [page, limit, searchQuery, selectedCategory, sortBy, order]
+    [page, limit, searchQuery, selectedCategory, sortBy, order, router]
   );
 
   useEffect(() => {
