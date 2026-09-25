@@ -136,3 +136,13 @@ export const updateProduct = async (
 
   return response.data;
 };
+
+export const deleteProduct = async (
+  id: number
+): Promise<Product> => {
+  const response = await api.delete<Product>(
+    `/products/${id}`
+  );
+
+  return response.data;
+};

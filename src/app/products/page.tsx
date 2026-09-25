@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getProducts,
@@ -8,6 +8,7 @@ import {
   getCategories,
   getProductsByCategory,
   Category,
+  deleteProduct,
 } from "@/api/products";
 
 export default function ProductsPage() {
@@ -75,6 +76,14 @@ export default function ProductsPage() {
     return "";
   });
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const [deleteError, setDeleteError] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [error, setError] = useState("");
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
@@ -85,29 +94,18 @@ export default function ProductsPage() {
     };
   }, [searchInput]);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
+  const fetchProducts = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoading(true);
+      setError("");
 
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    const controller = new AbortController();
-
-    const fetchProducts = async () => {
       try {
         const skip = (page - 1) * limit;
 
         let data;
 
         if (searchQuery) {
-          data = await searchProducts(
-            searchQuery,
-            limit,
-            skip,
-            controller.signal
-          );
+          data = await searchProducts(searchQuery, limit, skip, signal);
         } else if (selectedCategory) {
           data = await getProductsByCategory(
             selectedCategory,
@@ -115,35 +113,46 @@ export default function ProductsPage() {
             skip,
             sortBy,
             order,
-            controller.signal
+            signal
           );
         } else {
-          data = await getProducts(
-            limit,
-            skip,
-            sortBy,
-            order,
-            controller.signal
-          );
+          data = await getProducts(limit, skip, sortBy, order, signal);
         }
 
         setProducts(data.products);
         setTotal(data.total);
       } catch (error) {
-        if (controller.signal.aborted) {
+        if (signal?.aborted) {
           return;
         }
 
         console.error(error);
+        setError("Failed to load products");
+      } finally {
+        if (!signal?.aborted) {
+          setIsLoading(false);
+        }
       }
-    };
+    },
+    [page, limit, searchQuery, selectedCategory, sortBy, order]
+  );
 
-    fetchProducts();
+  useEffect(() => {
+  const token = localStorage.getItem("token");
 
-    return () => {
-      controller.abort();
-    };
-  }, [router, page, limit, searchQuery, selectedCategory, sortBy, order]);
+  if (!token) {
+    router.replace("/login");
+    return;
+  }
+
+  const controller = new AbortController();
+
+  fetchProducts(controller.signal);
+
+  return () => {
+    controller.abort();
+  };
+}, [router, fetchProducts]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -164,11 +173,40 @@ export default function ProductsPage() {
 
   const end = Math.min(page * limit, total);
 
+  const handleDelete = async (id: number) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this product?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    if (deletingId !== null) {
+      return;
+    }
+
+    setDeletingId(id);
+    setDeleteError("");
+
+    try {
+      await deleteProduct(id);
+
+      setProducts((currentProducts) =>
+        currentProducts.filter((product) => product.id !== id)
+      );
+    } catch (error) {
+      console.error(error);
+      setDeleteError("Failed to delete product");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <main className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-
         <button
           onClick={() => router.push("/products/add")}
           className="bg-black text-white px-4 py-2 rounded"
@@ -176,6 +214,7 @@ export default function ProductsPage() {
           Add Product
         </button>
       </div>
+      {deleteError && <p className="mb-4 text-red-600">{deleteError}</p>}
       <div className="mb-6 flex gap-4">
         <input
           type="text"
@@ -288,167 +327,208 @@ export default function ProductsPage() {
         <option value="asc">Ascending</option>
         <option value="desc">Descending</option>
       </select>
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b">
-              <th className="p-4 text-left">Image</th>
-              <th className="p-4 text-left">Title</th>
-              <th className="p-4 text-left">Category</th>
-              <th className="p-4 text-left">Price</th>
-              <th className="p-4 text-left">Rating</th>
-              <th className="p-4 text-left">Stock</th>
-            </tr>
-          </thead>
+      {isLoading ? (
+        <div className="py-10 text-center">
+          <p className="text-gray-600">Loading products...</p>
+        </div>
+      ) : error ? (
+        <div className="py-10 text-center">
+          <p className="text-red-600">{error}</p>
 
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className="border-b">
-                <td className="p-4">
-                  <img
-                    src={product.thumbnail}
-                    alt={product.title}
-                    className="w-16 h-16 object-cover rounded"
-                  />
-                </td>
+          <button
+            onClick={() => fetchProducts()}
+            className="mt-4 border px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="py-10 text-center">
+          <p className="text-gray-600">No products found.</p>
+        </div>
+      ) : (
+        <>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="p-4 text-left">Image</th>
+                  <th className="p-4 text-left">Title</th>
+                  <th className="p-4 text-left">Category</th>
+                  <th className="p-4 text-left">Price</th>
+                  <th className="p-4 text-left">Rating</th>
+                  <th className="p-4 text-left">Stock</th>
+                </tr>
+              </thead>
 
-                <td className="p-4">{product.title}</td>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-b">
+                    <td className="p-4">
+                      <img
+                        src={product.thumbnail}
+                        alt={product.title}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    </td>
 
-                <td className="p-4">{product.category}</td>
+                    <td className="p-4">{product.title}</td>
 
-                <td className="p-4">${product.price}</td>
+                    <td className="p-4">{product.category}</td>
 
-                <td className="p-4">⭐ {product.rating}</td>
+                    <td className="p-4">${product.price}</td>
 
-                <td className="p-4">{product.stock}</td>
+                    <td className="p-4">⭐ {product.rating}</td>
 
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => router.push(`/products/${product.id}/edit`)}
-                    className="border px-3 py-1 rounded"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    <td className="p-4">{product.stock}</td>
 
-      <div className="md:hidden space-y-4">
-        {products.map((product) => (
-          <div key={product.id} className="border rounded-lg p-4">
-            <img
-              src={product.thumbnail}
-              alt={product.title}
-              className="w-24 h-24 object-cover rounded mb-4"
-            />
-
-            <h2 className="font-semibold text-lg">{product.title}</h2>
-
-            <p>Category: {product.category}</p>
-
-            <p>Price: ${product.price}</p>
-
-            <p>Rating: ⭐ {product.rating}</p>
-
-            <p>Stock: {product.stock}</p>
-
-            <button
-              onClick={() => router.push(`/products/${product.id}/edit`)}
-              className="border px-3 py-1 rounded"
-            >
-              Edit
-            </button>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() =>
+                          router.push(`/products/${product.id}/edit`)
+                        }
+                        className="border px-3 py-1 rounded"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        disabled={deletingId !== null}
+                        className="border border-red-500 text-red-500 px-3 py-1 rounded disabled:opacity-50"
+                      >
+                        {deletingId === product.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
 
-      <div className="flex items-center justify-between mt-6">
-        <p>
-          Showing {start}–{end} of {total}
-        </p>
+          <div className="md:hidden space-y-4">
+            {products.map((product) => (
+              <div key={product.id} className="border rounded-lg p-4">
+                <img
+                  src={product.thumbnail}
+                  alt={product.title}
+                  className="w-24 h-24 object-cover rounded mb-4"
+                />
 
-        <select
-          value={limit}
-          onChange={(e) => {
-            const newLimit = Number(e.target.value);
+                <h2 className="font-semibold text-lg">{product.title}</h2>
 
-            setLimit(newLimit);
-            setPage(1);
+                <p>Category: {product.category}</p>
 
-            const params = new URLSearchParams(searchParams.toString());
+                <p>Price: ${product.price}</p>
 
-            params.set("limit", String(newLimit));
-            params.set("page", "1");
+                <p>Rating: ⭐ {product.rating}</p>
 
-            router.replace(`/products?${params.toString()}`);
-          }}
-          className="border rounded px-3 py-2"
-        >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
-      </div>
+                <p>Stock: {product.stock}</p>
 
-      <div className="flex items-center justify-center gap-2 mt-6">
-        <button
-          onClick={() => {
-            const newPage = page - 1;
+                <button
+                  onClick={() => router.push(`/products/${product.id}/edit`)}
+                  className="border px-3 py-1 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(product.id)}
+                  disabled={deletingId !== null}
+                  className="border border-red-500 text-red-500 px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {deletingId === product.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            ))}
+          </div>
 
-            setPage(newPage);
+          <div className="flex items-center justify-between mt-6">
+            <p>
+              Showing {start}–{end} of {total}
+            </p>
 
-            const params = new URLSearchParams(searchParams.toString());
-            params.set("page", String(newPage));
+            <select
+              value={limit}
+              onChange={(e) => {
+                const newLimit = Number(e.target.value);
 
-            router.replace(`/products?${params.toString()}`);
-          }}
-          disabled={page === 1}
-          className="border px-3 py-2 rounded"
-        >
-          Previous
-        </button>
-
-        {Array.from({ length: totalPages }, (_, index) => {
-          const pageNumber = index + 1;
-
-          return (
-            <button
-              key={pageNumber}
-              onClick={() => {
-                setPage(pageNumber);
+                setLimit(newLimit);
+                setPage(1);
 
                 const params = new URLSearchParams(searchParams.toString());
-                params.set("page", String(pageNumber));
+
+                params.set("limit", String(newLimit));
+                params.set("page", "1");
 
                 router.replace(`/products?${params.toString()}`);
               }}
+              className="border rounded px-3 py-2"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => {
+                const newPage = page - 1;
+
+                setPage(newPage);
+
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", String(newPage));
+
+                router.replace(`/products?${params.toString()}`);
+              }}
+              disabled={page === 1}
               className="border px-3 py-2 rounded"
             >
-              {pageNumber}
+              Previous
             </button>
-          );
-        })}
 
-        <button
-          onClick={() => {
-            const newPage = page + 1;
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1;
 
-            setPage(newPage);
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => {
+                    setPage(pageNumber);
 
-            const params = new URLSearchParams(searchParams.toString());
-            params.set("page", String(newPage));
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("page", String(pageNumber));
 
-            router.replace(`/products?${params.toString()}`);
-          }}
-          disabled={page === totalPages}
-          className="border px-3 py-2 rounded"
-        >
-          Next
-        </button>
-      </div>
+                    router.replace(`/products?${params.toString()}`);
+                  }}
+                  className="border px-3 py-2 rounded"
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => {
+                const newPage = page + 1;
+
+                setPage(newPage);
+
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", String(newPage));
+
+                router.replace(`/products?${params.toString()}`);
+              }}
+              disabled={page === totalPages}
+              className="border px-3 py-2 rounded"
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </main>
   );
 }
