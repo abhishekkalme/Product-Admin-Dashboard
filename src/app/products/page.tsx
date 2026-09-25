@@ -243,6 +243,7 @@ export default function ProductsPage() {
             const value = e.target.value;
 
             setSearchInput(value);
+            setSelectedCategory("");
             setPage(1);
 
             const params = new URLSearchParams(searchParams.toString());
@@ -253,6 +254,7 @@ export default function ProductsPage() {
               params.delete("search");
             }
 
+            params.delete("category");
             params.set("page", "1");
 
             router.replace(`/products?${params.toString()}`);
@@ -266,6 +268,7 @@ export default function ProductsPage() {
             const value = e.target.value;
 
             setSelectedCategory(value);
+            setSearchInput("");
             setPage(1);
 
             const params = new URLSearchParams(searchParams.toString());
@@ -276,6 +279,7 @@ export default function ProductsPage() {
               params.delete("category");
             }
 
+            params.delete("search");
             params.set("page", "1");
 
             router.replace(`/products?${params.toString()}`);
