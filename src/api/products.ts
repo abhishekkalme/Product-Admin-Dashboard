@@ -1,5 +1,13 @@
 import api from "./axios";
 
+export interface ProductReview {
+  rating: number;
+  comment: string;
+  date: string;
+  reviewerName: string;
+  reviewerEmail: string;
+}
+
 export interface Product {
   id: number;
   title: string;
@@ -8,6 +16,9 @@ export interface Product {
   rating: number;
   stock: number;
   thumbnail: string;
+  description: string;
+  images: string[];
+  reviews: ProductReview[];
 }
 
 export interface Category {
@@ -19,7 +30,7 @@ export interface Category {
 export const getProducts = async (
   limit: number,
   skip: number,
-   sortBy?: string,
+  sortBy?: string,
   order?: string,
   signal?: AbortSignal
 ) => {
@@ -75,6 +86,17 @@ export const getProductsByCategory = async (
       sortBy,
       order,
     },
+    signal,
+  });
+
+  return response.data;
+};
+
+export const getProductById = async (
+  id: number,
+  signal?: AbortSignal
+): Promise<Product> => {
+  const response = await api.get<Product>(`/products/${id}`, {
     signal,
   });
 
