@@ -124,3 +124,15 @@ export const createProduct = async (
 
   return response.data;
 };
+
+export const updateProduct = async (
+  id: number,
+  data: UpdateProductData
+): Promise<Product> => {
+  const response = await api.put<Product>(
+    `/products/${id}`,
+    data
+  );
+
+  return response.data;
+};
