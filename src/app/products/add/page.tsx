@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/api/products";
+import { saveAddedProduct } from "@/utils/productStorage";
 
 export default function AddProductPage() {
   const [title, setTitle] = useState("");
@@ -53,7 +54,7 @@ export default function AddProductPage() {
         stock: Number(stock),
       });
 
-      console.log("Created product:", product);
+      saveAddedProduct(product);
 
       router.push("/products");
     } catch (error) {

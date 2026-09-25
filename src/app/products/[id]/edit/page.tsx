@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getProductById, Product, updateProduct } from "@/api/products";
+import { saveUpdatedProduct } from "@/utils/productStorage";
 
 export default function EditProductPage() {
   const params = useParams();
+
+  const router = useRouter();
 
   const id = Number(params.id);
 
@@ -94,7 +97,9 @@ export default function EditProductPage() {
         stock: Number(stock),
       });
 
-      console.log("Updated product:", updatedProduct);
+      saveUpdatedProduct(updatedProduct);
+
+      router.push("/products");
     } catch (error) {
       console.error(error);
       setError("Failed to update product");

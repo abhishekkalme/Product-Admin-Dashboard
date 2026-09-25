@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getProductById, Product } from "@/api/products";
+import { getUpdatedProducts } from "@/utils/productStorage";
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -10,7 +11,6 @@ export default function ProductDetailsPage() {
   const id = Number(params.id);
 
   const [product, setProduct] = useState<Product | null>(null);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -18,9 +18,20 @@ export default function ProductDetailsPage() {
 
     const fetchProduct = async () => {
       try {
-        const data = await getProductById(id, controller.signal);
+        const data = await getProductById(
+          id,
+          controller.signal
+        );
 
-        setProduct(data);
+        const updatedProducts = getUpdatedProducts();
+
+        const localProduct = updatedProducts[String(id)];
+
+        const productWithUpdate = localProduct
+          ? { ...data, ...localProduct }
+          : data;
+
+        setProduct(productWithUpdate);
       } catch (error) {
         if (controller.signal.aborted) {
           return;
@@ -41,7 +52,9 @@ export default function ProductDetailsPage() {
   if (error) {
     return (
       <main className="p-6">
-        <h1 className="text-2xl font-bold">Product Not Found</h1>
+        <h1 className="text-2xl font-bold">
+          Product Not Found
+        </h1>
 
         <p className="mt-2 text-gray-600">
           The product you are looking for does not exist.
@@ -53,7 +66,9 @@ export default function ProductDetailsPage() {
   if (!product) {
     return (
       <main className="p-6">
-        <p className="text-gray-600">Loading product...</p>
+        <p className="text-gray-600">
+          Loading product...
+        </p>
       </main>
     );
   }
@@ -70,13 +85,21 @@ export default function ProductDetailsPage() {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold">{product.title}</h1>
+          <h1 className="text-3xl font-bold">
+            {product.title}
+          </h1>
 
-          <p className="mt-4 text-gray-600">{product.description}</p>
+          <p className="mt-4 text-gray-600">
+            {product.description}
+          </p>
 
-          <p className="mt-6 text-2xl font-bold">${product.price}</p>
+          <p className="mt-6 text-2xl font-bold">
+            ${product.price}
+          </p>
 
-          <p className="mt-2">Category: {product.category}</p>
+          <p className="mt-2">
+            Category: {product.category}
+          </p>
 
           <p>Rating: {product.rating}</p>
 
@@ -84,21 +107,34 @@ export default function ProductDetailsPage() {
         </div>
 
         <div className="mt-10">
-          <h2 className="text-2xl font-bold mb-4">Reviews</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            Reviews
+          </h2>
 
           <div className="space-y-4">
             {product.reviews.map((review, index) => (
-              <div key={index} className="border rounded-lg p-4">
+              <div
+                key={index}
+                className="border rounded-lg p-4"
+              >
                 <div className="flex justify-between">
-                  <h3 className="font-semibold">{review.reviewerName}</h3>
+                  <h3 className="font-semibold">
+                    {review.reviewerName}
+                  </h3>
 
-                  <span>⭐ {review.rating}/5</span>
+                  <span>
+                    ⭐ {review.rating}/5
+                  </span>
                 </div>
 
-                <p className="mt-2 text-gray-600">{review.comment}</p>
+                <p className="mt-2 text-gray-600">
+                  {review.comment}
+                </p>
 
                 <p className="mt-2 text-sm text-gray-500">
-                  {new Date(review.date).toLocaleDateString()}
+                  {new Date(
+                    review.date
+                  ).toLocaleDateString()}
                 </p>
               </div>
             ))}

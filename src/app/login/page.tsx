@@ -9,11 +9,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
-    if (isLoading) return;
+
+    if (isLoading) {
+      return;
+    }
 
     setIsLoading(true);
     setError("");
@@ -24,10 +30,14 @@ export default function LoginPage() {
         password,
       });
 
-      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem(
+        "token",
+        response.accessToken
+      );
 
       router.push("/products");
     } catch (error) {
+      console.error(error);
       setError("Invalid username or password");
     } finally {
       setIsLoading(false);
@@ -35,30 +45,49 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold">Product Admin</h1>
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-md space-y-4 border rounded-lg p-6"
+      >
+        <h1 className="text-2xl font-bold">
+          Login
+        </h1>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+        {error && (
+          <p className="text-red-600">
+            {error}
+          </p>
+        )}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) =>
+            setUsername(e.target.value)
+          }
+          className="w-full border rounded px-4 py-2"
+        />
 
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-      </div>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          className="w-full border rounded px-4 py-2"
+        />
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        >
+          {isLoading ? "Logging in..." : "Login"}
+        </button>
+      </form>
     </main>
   );
 }

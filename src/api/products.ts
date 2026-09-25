@@ -27,20 +27,6 @@ export interface Category {
   url: string;
 }
 
-export interface CreateProductData {
-  title: string;
-  price: number;
-  category: string;
-  stock: number;
-}
-
-export interface UpdateProductData {
-  title: string;
-  price: number;
-  category: string;
-  stock: number;
-}
-
 export const getProducts = async (
   limit: number,
   skip: number,
@@ -93,15 +79,18 @@ export const getProductsByCategory = async (
   order?: string,
   signal?: AbortSignal
 ) => {
-  const response = await api.get(`/products/category/${category}`, {
-    params: {
-      limit,
-      skip,
-      sortBy,
-      order,
-    },
-    signal,
-  });
+  const response = await api.get(
+    `/products/category/${category}`,
+    {
+      params: {
+        limit,
+        skip,
+        sortBy,
+        order,
+      },
+      signal,
+    }
+  );
 
   return response.data;
 };
@@ -110,20 +99,40 @@ export const getProductById = async (
   id: number,
   signal?: AbortSignal
 ): Promise<Product> => {
-  const response = await api.get<Product>(`/products/${id}`, {
-    signal,
-  });
+  const response = await api.get<Product>(
+    `/products/${id}`,
+    {
+      signal,
+    }
+  );
 
   return response.data;
 };
+
+export interface CreateProductData {
+  title: string;
+  price: number;
+  category: string;
+  stock: number;
+}
 
 export const createProduct = async (
   data: CreateProductData
 ): Promise<Product> => {
-  const response = await api.post<Product>("/products/add", data);
+  const response = await api.post<Product>(
+    "/products/add",
+    data
+  );
 
   return response.data;
 };
+
+export interface UpdateProductData {
+  title: string;
+  price: number;
+  category: string;
+  stock: number;
+}
 
 export const updateProduct = async (
   id: number,

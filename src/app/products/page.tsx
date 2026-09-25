@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getProducts,
@@ -10,8 +10,15 @@ import {
   Category,
   deleteProduct,
 } from "@/api/products";
+import {
+  saveDeletedProduct,
+  getDeletedProducts,
+  getAddedProducts,
+  getUpdatedProducts,
+  removeAddedProduct,
+} from "@/utils/productStorage";
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -133,8 +140,29 @@ export default function ProductsPage() {
           return;
         }
 
-        setProducts(data.products);
-        setTotal(data.total);
+        const updatedProducts = getUpdatedProducts();
+        const addedProducts = getAddedProducts();
+        const deletedProducts = getDeletedProducts();
+
+        const productsWithUpdates = data.products
+          .map((product: Product) => {
+            return updatedProducts[String(product.id)] || product;
+          })
+          .filter((product: Product) => {
+            return !deletedProducts.includes(product.id);
+          });
+
+        const allProducts =
+          page === 1 && !searchQuery && !selectedCategory
+            ? [...addedProducts, ...productsWithUpdates]
+            : productsWithUpdates;
+
+        setProducts(allProducts);
+        setTotal(
+          page === 1 && !searchQuery && !selectedCategory
+            ? data.total + addedProducts.length - deletedProducts.length
+            : data.total - deletedProducts.length
+        );
       } catch (error) {
         if (signal?.aborted) {
           return;
@@ -197,7 +225,16 @@ export default function ProductsPage() {
     setDeleteError("");
 
     try {
-      await deleteProduct(id);
+      const addedProducts = getAddedProducts();
+
+      const isAddedProduct = addedProducts.some((product) => product.id === id);
+
+      if (isAddedProduct) {
+        removeAddedProduct(id);
+      } else {
+        await deleteProduct(id);
+        saveDeletedProduct(id);
+      }
 
       setProducts((currentProducts) =>
         currentProducts.filter((product) => product.id !== id)
@@ -395,7 +432,12 @@ export default function ProductsPage() {
                       />
                     </td>
 
-                    <td className="p-4">{product.title}</td>
+                    <td
+                      className="p-4 cursor-pointer hover:underline"
+                      onClick={() => router.push(`/products/${product.id}`)}
+                    >
+                      {product.title}
+                    </td>
 
                     <td className="p-4">{product.category}</td>
 
@@ -553,5 +595,12 @@ export default function ProductsPage() {
         </>
       )}
     </main>
+  );
+}
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

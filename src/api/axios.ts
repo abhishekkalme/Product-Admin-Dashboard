@@ -8,26 +8,29 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
 
     if (error.response) {
-      console.error(`API Error ${error.response.status}:`, error.response.data);
+      console.error(
+        `API Error ${error.response.status}:`,
+        error.response.data
+      );
     } else if (error.request) {
       console.error("Network Error: No response received");
     } else {
