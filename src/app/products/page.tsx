@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   getProducts,
   Product,
@@ -13,29 +13,71 @@ import {
 export default function ProductsPage() {
   const router = useRouter();
 
+  const searchParams = useSearchParams();
+
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const pageParam = searchParams.get("page");
+    const pageNumber = Number(pageParam);
 
-  const [limit, setLimit] = useState(20);
+    if (Number.isInteger(pageNumber) && pageNumber > 0) {
+      return pageNumber;
+    }
+
+    return 1;
+  });
+
+  const [limit, setLimit] = useState(() => {
+    const limitParam = searchParams.get("limit");
+    const limitNumber = Number(limitParam);
+
+    if ([10, 20, 50].includes(limitNumber)) {
+      return limitNumber;
+    }
+
+    return 20;
+  });
 
   const [total, setTotal] = useState(0);
 
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState(() => {
+    return searchParams.get("search") || "";
+  });
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return searchParams.get("search") || "";
+  });
 
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    return searchParams.get("category") || "";
+  });
 
-  const [sortBy, setSortBy] = useState("");
-  const [order, setOrder] = useState("");
+  const [sortBy, setSortBy] = useState(() => {
+    const value = searchParams.get("sort");
+
+    if (["title", "price", "rating"].includes(value || "")) {
+      return value || "";
+    }
+
+    return "";
+  });
+
+  const [order, setOrder] = useState(() => {
+    const value = searchParams.get("order");
+
+    if (["asc", "desc"].includes(value || "")) {
+      return value || "";
+    }
+
+    return "";
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
-      setPage(1);
     }, 500);
 
     return () => {
@@ -131,7 +173,22 @@ export default function ProductsPage() {
           placeholder="Search products..."
           value={searchInput}
           onChange={(e) => {
-            setSearchInput(e.target.value);
+            const value = e.target.value;
+
+            setSearchInput(value);
+            setPage(1);
+
+            const params = new URLSearchParams(searchParams.toString());
+
+            if (value) {
+              params.set("search", value);
+            } else {
+              params.delete("search");
+            }
+
+            params.set("page", "1");
+
+            router.replace(`/products?${params.toString()}`);
           }}
           className="border rounded px-4 py-2 w-full max-w-md"
         />
@@ -139,8 +196,22 @@ export default function ProductsPage() {
         <select
           value={selectedCategory}
           onChange={(e) => {
-            setSelectedCategory(e.target.value);
+            const value = e.target.value;
+
+            setSelectedCategory(value);
             setPage(1);
+
+            const params = new URLSearchParams(searchParams.toString());
+
+            if (value) {
+              params.set("category", value);
+            } else {
+              params.delete("category");
+            }
+
+            params.set("page", "1");
+
+            router.replace(`/products?${params.toString()}`);
           }}
           className="border rounded px-4 py-2"
         >
@@ -157,8 +228,22 @@ export default function ProductsPage() {
       <select
         value={sortBy}
         onChange={(e) => {
-          setSortBy(e.target.value);
+          const value = e.target.value;
+
+          setSortBy(value);
           setPage(1);
+
+          const params = new URLSearchParams(searchParams.toString());
+
+          if (value) {
+            params.set("sort", value);
+          } else {
+            params.delete("sort");
+          }
+
+          params.set("page", "1");
+
+          router.replace(`/products?${params.toString()}`);
         }}
         className="border rounded px-4 py-2"
       >
@@ -171,8 +256,22 @@ export default function ProductsPage() {
       <select
         value={order}
         onChange={(e) => {
-          setOrder(e.target.value);
+          const value = e.target.value;
+
+          setOrder(value);
           setPage(1);
+
+          const params = new URLSearchParams(searchParams.toString());
+
+          if (value) {
+            params.set("order", value);
+          } else {
+            params.delete("order");
+          }
+
+          params.set("page", "1");
+
+          router.replace(`/products?${params.toString()}`);
         }}
         className="border rounded px-4 py-2"
       >
@@ -249,8 +348,17 @@ export default function ProductsPage() {
         <select
           value={limit}
           onChange={(e) => {
-            setLimit(Number(e.target.value));
+            const newLimit = Number(e.target.value);
+
+            setLimit(newLimit);
             setPage(1);
+
+            const params = new URLSearchParams(searchParams.toString());
+
+            params.set("limit", String(newLimit));
+            params.set("page", "1");
+
+            router.replace(`/products?${params.toString()}`);
           }}
           className="border rounded px-3 py-2"
         >
@@ -262,7 +370,16 @@ export default function ProductsPage() {
 
       <div className="flex items-center justify-center gap-2 mt-6">
         <button
-          onClick={() => setPage(page - 1)}
+          onClick={() => {
+            const newPage = page - 1;
+
+            setPage(newPage);
+
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("page", String(newPage));
+
+            router.replace(`/products?${params.toString()}`);
+          }}
           disabled={page === 1}
           className="border px-3 py-2 rounded"
         >
@@ -275,7 +392,14 @@ export default function ProductsPage() {
           return (
             <button
               key={pageNumber}
-              onClick={() => setPage(pageNumber)}
+              onClick={() => {
+                setPage(pageNumber);
+
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", String(pageNumber));
+
+                router.replace(`/products?${params.toString()}`);
+              }}
               className="border px-3 py-2 rounded"
             >
               {pageNumber}
@@ -284,7 +408,16 @@ export default function ProductsPage() {
         })}
 
         <button
-          onClick={() => setPage(page + 1)}
+          onClick={() => {
+            const newPage = page + 1;
+
+            setPage(newPage);
+
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("page", String(newPage));
+
+            router.replace(`/products?${params.toString()}`);
+          }}
           disabled={page === totalPages}
           className="border px-3 py-2 rounded"
         >
