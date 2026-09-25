@@ -138,21 +138,14 @@ export default function ProductsPage() {
   );
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
+    const controller = new AbortController();
 
-  if (!token) {
-    router.replace("/login");
-    return;
-  }
+    fetchProducts(controller.signal);
 
-  const controller = new AbortController();
-
-  fetchProducts(controller.signal);
-
-  return () => {
-    controller.abort();
-  };
-}, [router, fetchProducts]);
+    return () => {
+      controller.abort();
+    };
+  }, [router, fetchProducts]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -203,16 +196,28 @@ export default function ProductsPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.replace("/login");
+  };
+
   return (
     <main className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        <button
-          onClick={() => router.push("/products/add")}
-          className="bg-black text-white px-4 py-2 rounded"
-        >
-          Add Product
-        </button>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => router.push("/products/add")}
+            className="rounded bg-blue-600 px-4 py-2 text-white"
+          >
+            Add Product
+          </button>
+
+          <button onClick={handleLogout} className="rounded border px-4 py-2">
+            Logout
+          </button>
+        </div>
       </div>
       {deleteError && <p className="mb-4 text-red-600">{deleteError}</p>}
       <div className="mb-6 flex gap-4">
