@@ -166,7 +166,16 @@ export default function ProductsPage() {
 
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Products</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Products</h1>
+
+        <button
+          onClick={() => router.push("/products/add")}
+          className="bg-black text-white px-4 py-2 rounded"
+        >
+          Add Product
+        </button>
+      </div>
       <div className="mb-6 flex gap-4">
         <input
           type="text"
@@ -312,6 +321,15 @@ export default function ProductsPage() {
                 <td className="p-4">⭐ {product.rating}</td>
 
                 <td className="p-4">{product.stock}</td>
+
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => router.push(`/products/${product.id}/edit`)}
+                    className="border px-3 py-1 rounded"
+                  >
+                    Edit
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -336,6 +354,13 @@ export default function ProductsPage() {
             <p>Rating: ⭐ {product.rating}</p>
 
             <p>Stock: {product.stock}</p>
+
+            <button
+              onClick={() => router.push(`/products/${product.id}/edit`)}
+              className="border px-3 py-1 rounded"
+            >
+              Edit
+            </button>
           </div>
         ))}
       </div>

@@ -27,6 +27,20 @@ export interface Category {
   url: string;
 }
 
+export interface CreateProductData {
+  title: string;
+  price: number;
+  category: string;
+  stock: number;
+}
+
+export interface UpdateProductData {
+  title: string;
+  price: number;
+  category: string;
+  stock: number;
+}
+
 export const getProducts = async (
   limit: number,
   skip: number,
@@ -99,6 +113,14 @@ export const getProductById = async (
   const response = await api.get<Product>(`/products/${id}`, {
     signal,
   });
+
+  return response.data;
+};
+
+export const createProduct = async (
+  data: CreateProductData
+): Promise<Product> => {
+  const response = await api.post<Product>("/products/add", data);
 
   return response.data;
 };
