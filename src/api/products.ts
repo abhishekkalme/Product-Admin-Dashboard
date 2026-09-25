@@ -19,12 +19,16 @@ export interface Category {
 export const getProducts = async (
   limit: number,
   skip: number,
+   sortBy?: string,
+  order?: string,
   signal?: AbortSignal
 ) => {
   const response = await api.get("/products", {
     params: {
       limit,
       skip,
+      sortBy,
+      order,
     },
     signal,
   });
@@ -60,12 +64,16 @@ export const getProductsByCategory = async (
   category: string,
   limit: number,
   skip: number,
+  sortBy?: string,
+  order?: string,
   signal?: AbortSignal
 ) => {
   const response = await api.get(`/products/category/${category}`, {
     params: {
       limit,
       skip,
+      sortBy,
+      order,
     },
     signal,
   });

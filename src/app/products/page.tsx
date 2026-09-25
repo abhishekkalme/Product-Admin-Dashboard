@@ -29,6 +29,9 @@ export default function ProductsPage() {
 
   const [selectedCategory, setSelectedCategory] = useState("");
 
+  const [sortBy, setSortBy] = useState("");
+  const [order, setOrder] = useState("");
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(searchInput);
@@ -68,10 +71,18 @@ export default function ProductsPage() {
             selectedCategory,
             limit,
             skip,
+            sortBy,
+            order,
             controller.signal
           );
         } else {
-          data = await getProducts(limit, skip, controller.signal);
+          data = await getProducts(
+            limit,
+            skip,
+            sortBy,
+            order,
+            controller.signal
+          );
         }
 
         setProducts(data.products);
@@ -90,7 +101,7 @@ export default function ProductsPage() {
     return () => {
       controller.abort();
     };
-  }, [router, page, limit, searchQuery, selectedCategory]);
+  }, [router, page, limit, searchQuery, selectedCategory, sortBy, order]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -143,6 +154,32 @@ export default function ProductsPage() {
         </select>
       </div>
 
+      <select
+        value={sortBy}
+        onChange={(e) => {
+          setSortBy(e.target.value);
+          setPage(1);
+        }}
+        className="border rounded px-4 py-2"
+      >
+        <option value="">Sort By</option>
+        <option value="title">Title</option>
+        <option value="price">Price</option>
+        <option value="rating">Rating</option>
+      </select>
+
+      <select
+        value={order}
+        onChange={(e) => {
+          setOrder(e.target.value);
+          setPage(1);
+        }}
+        className="border rounded px-4 py-2"
+      >
+        <option value="">Order</option>
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+      </select>
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
